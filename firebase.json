@@ -1,0 +1,27 @@
+{
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "run": {
+          "serviceId": "hp2pc",
+          "region": "asia-northeast3"
+        }
+      }
+    ],
+    "headers": [
+      {
+        "source": "/*.@(css|js)",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=3600" }
+        ]
+      }
+    ]
+  }
+}

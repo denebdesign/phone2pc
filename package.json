@@ -1,0 +1,17 @@
+{
+  "name": "hp2pc",
+  "version": "1.0.0",
+  "private": true,
+  "description": "폰에서 찍은 사진을 QR 한 번으로 PC로 옮기는 웹앱",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

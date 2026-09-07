@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hp2pc — 폰에서 PC로 사진 보내기</title>
+<meta name="description" content="폰으로 QR을 찍고 사진을 고르면 PC 화면에 바로 뜹니다. 설치도 로그인도 필요 없습니다.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📥</text></svg>">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <b>hp2pc</b>
+    <span>폰에서 찍은 사진을 이 PC로 바로</span>
+  </div>
+  <div class="status" id="status"><span class="dot"></span><span id="statusText">준비 중…</span></div>
+</header>
+
+<main class="layout">
+  <section class="card qr-card">
+    <p class="step"><b>폰 카메라</b>로 아래 QR을 비추세요</p>
+
+    <div class="qr-frame loading" id="qrFrame">QR 만드는 중…</div>
+
+    <div class="url-row">
+      <code id="urlText">–</code>
+      <button class="btn ghost small" id="copyUrl" title="주소 복사">복사</button>
+    </div>
+
+    <button class="btn" id="newSession" style="width:100%">새 QR 만들기</button>
+
+    <details class="host-picker" id="hostRow" hidden>
+      <summary>폰에서 안 열리면 여기를 눌러 주소를 바꿔보세요</summary>
+      <select id="hostSelect"></select>
+      <p class="hint" style="margin-top:8px">
+        네트워크 어댑터가 여러 개면 폰이 붙어 있는 와이파이와 같은 대역의 주소를 골라야 합니다.
+      </p>
+    </details>
+
+    <div class="hint">
+      <ul>
+        <li>폰에 앱을 깔 필요 없습니다. 기본 카메라로 QR만 비추면 됩니다.</li>
+        <li>사진은 <b>저장되지 않습니다.</b> 이 화면이 받아가면 서버에서 바로 지워집니다.</li>
+        <li>이 창을 닫으면 전송도 멈춥니다.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="card files-card">
+    <div class="files-head">
+      <h2>받은 파일<span class="count" id="count">0</span></h2>
+      <label class="auto-dl"><input type="checkbox" id="autoDownload"> 받는 즉시 자동 저장</label>
+      <button class="btn" id="zipBtn" disabled>전체 ZIP 저장</button>
+      <button class="btn danger" id="clearBtn" disabled>비우기</button>
+    </div>
+
+    <div class="empty" id="empty">
+      아직 받은 파일이 없습니다.<br>폰에서 QR을 찍고 사진을 고르면 여기에 바로 나타납니다.
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="/qr.js"></script>
+<script src="/desktop.js"></script>
+</body>
+</html>
