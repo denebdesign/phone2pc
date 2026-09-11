@@ -18,6 +18,8 @@ const clearBtn = el('clearBtn');
 const autoDownload = el('autoDownload');
 const toastBox = el('toast');
 
+const T = (key, vars) => window.I18N.t(key, vars);
+
 const POLL_MIN_MS = 1200;
 const POLL_MAX_MS = 5000;
 const POLL_HIDDEN_MS = 8000;   // 탭이 안 보일 때는 느리게
@@ -62,7 +64,7 @@ async function boot() {
   try {
     net = await fetch('/api/net').then((r) => r.json());
   } catch (err) {
-    setStatus('off', '서버에 연결하지 못했습니다');
+    setStatus('off', T('d.status.noServer'));
     return;
   }
 
@@ -77,7 +79,7 @@ async function boot() {
       node.textContent = opt.label;
       hostSelect.appendChild(node);
     }
-    const saved = localStorage.getItem('hp2pc.host');
+    const saved = localStorage.getItem('phone2pc.host');
     hostSelect.value = (saved && options.some((o) => o.value === saved)) ? saved : net.suggested;
     if (!hostSelect.value) hostSelect.value = options[0].value;
   } else {
@@ -92,19 +94,19 @@ async function newSession() {
   files = [];
   render();
   qrFrame.classList.add('loading');
-  qrFrame.textContent = 'QR 만드는 중…';
-  setStatus('', '세션 준비 중…');
+  qrFrame.textContent = T('d.qr.making');
+  setStatus('', T('d.status.session'));
 
   try {
     const data = await fetch('/api/session', { method: 'POST' }).then((r) => r.json());
     sessionId = data.id;
   } catch (err) {
-    setStatus('off', '세션을 만들지 못했습니다');
+    setStatus('off', T('d.status.sessionFail'));
     return;
   }
 
   updateQr();
-  setStatus('on', '대기 중 — 폰에서 QR을 찍으세요');
+  setStatus('on', T('d.status.waiting'));
   startPolling();
 }
 
@@ -113,7 +115,7 @@ function updateQr() {
 
   if (net.mode === 'local') {
     const host = hostSelect.value || location.hostname;
-    localStorage.setItem('hp2pc.host', host);
+    localStorage.setItem('phone2pc.host', host);
     shareUrl = `http://${host}:${net.port}/s/${sessionId}`;
   } else {
     shareUrl = `${location.origin}/s/${sessionId}`;
@@ -127,7 +129,7 @@ function updateQr() {
     qrFrame.innerHTML = QR.toSvg(qr, { border: 2 });
   } catch (err) {
     qrFrame.classList.add('loading');
-    qrFrame.textContent = 'QR을 만들지 못했습니다';
+    qrFrame.textContent = T('d.qr.fail');
   }
 }
 
@@ -161,7 +163,7 @@ async function poll() {
     const res = await fetch(`/api/poll/${sessionId}`, { cache: 'no-store' });
     if (res.status === 404) {
       stopPolling();
-      setStatus('off', '세션이 만료되었습니다 — 새 QR을 만들어 주세요');
+      setStatus('off', T('d.status.expired'));
       return;
     }
     if (!res.ok) throw new Error('poll failed');
@@ -175,19 +177,21 @@ async function poll() {
     if (changed) render();
 
     if (added.length > 0) {
-      setStatus('on', `폰 연결됨 — ${files.length}개 받음`);
+      setStatus('on', T('d.status.received', { n: files.length }));
       if (autoDownload.checked) for (const file of added) download(file);
       pollDelay = POLL_MIN_MS;          // 방금 왔으니 잠깐 촘촘하게 본다
     } else if (data.phoneSeen) {
-      setStatus('on', files.length > 0 ? `폰 연결됨 — ${files.length}개 받음` : '폰 연결됨 — 사진을 고르세요');
+      setStatus('on', files.length > 0
+        ? T('d.status.received', { n: files.length })
+        : T('d.status.pickPhoto'));
       pollDelay = Math.min(POLL_MAX_MS, Math.round(pollDelay * 1.2));
     } else {
-      setStatus('on', '대기 중 — 폰에서 QR을 찍으세요');
+      setStatus('on', T('d.status.waiting'));
       pollDelay = Math.min(POLL_MAX_MS, Math.round(pollDelay * 1.2));
     }
     schedule(pollDelay);
   } catch (err) {
-    setStatus('off', '다시 연결하는 중…');
+    setStatus('off', T('d.status.reconnect'));
     schedule(Math.min(POLL_MAX_MS, Math.round(pollDelay * 1.6)));
   }
 }
@@ -266,22 +270,22 @@ function tile(file) {
 
   const saveBtn = document.createElement('button');
   saveBtn.className = 'btn primary';
-  saveBtn.textContent = '저장';
+  saveBtn.textContent = T('d.save');
   saveBtn.onclick = () => download(file);
   actions.appendChild(saveBtn);
 
   if (file.type.startsWith('image/')) {
     const copyBtn = document.createElement('button');
     copyBtn.className = 'btn';
-    copyBtn.textContent = '복사';
-    copyBtn.title = '클립보드로 복사해서 바로 붙여넣기';
+    copyBtn.textContent = T('d.copy');
+    copyBtn.title = T('d.copyImageTitle');
     copyBtn.onclick = () => copyImage(file, copyBtn);
     actions.appendChild(copyBtn);
   }
 
   const delBtn = document.createElement('button');
   delBtn.className = 'btn danger';
-  delBtn.textContent = '삭제';
+  delBtn.textContent = T('d.delete');
   delBtn.onclick = () => remove(file);
   actions.appendChild(delBtn);
 
@@ -301,7 +305,7 @@ function download(file) {
 async function copyImage(file, button) {
   const label = button.textContent;
   button.disabled = true;
-  button.textContent = '복사 중…';
+  button.textContent = T('d.copying');
   try {
     const blob = await fetch(fileUrl(file)).then((r) => r.blob());
     // 클립보드는 PNG만 안정적으로 받으므로 캔버스로 변환한다
@@ -312,9 +316,9 @@ async function copyImage(file, button) {
     canvas.getContext('2d').drawImage(bitmap, 0, 0);
     const png = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
     await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
-    toast('클립보드에 복사했습니다 — Ctrl+V로 붙여넣으세요');
+    toast(T('d.copied'));
   } catch (err) {
-    toast('복사에 실패했습니다: ' + err.message);
+    toast(T('d.copyFailWith', { msg: err.message }));
   } finally {
     button.disabled = false;
     button.textContent = label;
@@ -327,7 +331,7 @@ async function remove(file) {
     files = files.filter((f) => f.id !== file.id);
     render();
   } catch (err) {
-    toast('삭제하지 못했습니다');
+    toast(T('d.deleteFail'));
   }
 }
 
@@ -336,14 +340,14 @@ async function remove(file) {
 el('copyUrl').onclick = async () => {
   try {
     await navigator.clipboard.writeText(shareUrl);
-    toast('주소를 복사했습니다');
+    toast(T('d.urlCopied'));
   } catch (err) {
-    toast('복사에 실패했습니다');
+    toast(T('d.copyFail'));
   }
 };
 
 el('newSession').onclick = () => {
-  if (files.length > 0 && !confirm('받은 파일 목록이 사라집니다. 새 QR을 만들까요?')) return;
+  if (files.length > 0 && !confirm(T('d.confirmNew'))) return;
   newSession();
 };
 
@@ -354,16 +358,16 @@ zipBtn.onclick = () => {
 };
 
 clearBtn.onclick = async () => {
-  if (!confirm('받은 파일을 모두 지울까요? PC에 저장하지 않은 파일은 사라집니다.')) return;
+  if (!confirm(T('d.confirmClear'))) return;
   await fetch(`/api/clear/${sessionId}`, { method: 'POST' });
   files = [];
   render();
 };
 
-autoDownload.checked = localStorage.getItem('hp2pc.autoDownload') === '1';
+autoDownload.checked = localStorage.getItem('phone2pc.autoDownload') === '1';
 autoDownload.onchange = () => {
-  localStorage.setItem('hp2pc.autoDownload', autoDownload.checked ? '1' : '0');
-  if (autoDownload.checked) toast('브라우저가 “여러 파일 다운로드 허용”을 물으면 허용해 주세요');
+  localStorage.setItem('phone2pc.autoDownload', autoDownload.checked ? '1' : '0');
+  if (autoDownload.checked) toast(T('d.autoDlNote'));
 };
 
 boot();

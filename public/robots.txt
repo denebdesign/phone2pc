@@ -1,0 +1,12 @@
+# phone2pc — 검색엔진 수집 규칙
+# /s/ 는 1회용 세션 주소, /api/ 는 데이터 전용이라 수집 대상이 아니다.
+# *.html 은 /ko, /en 과 내용이 같은 중복 주소라 막는다.
+
+User-agent: *
+Allow: /
+Disallow: /s/
+Disallow: /api/
+Disallow: /desktop.html
+Disallow: /mobile.html
+
+Sitemap: https://phone2pc.iuser.kr/sitemap.xml

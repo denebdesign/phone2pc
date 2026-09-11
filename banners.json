@@ -1,0 +1,93 @@
+{
+  "_설명": "하단 배너·회사정보 설정. 값을 채우면 화면에 반영되고, 비워두면 자리만 표시하거나 숨깁니다. 'En'으로 끝나는 항목은 국외 접속(영어) 화면에서만 쓰입니다.",
+
+  "site": {
+    "_설명": "url이 빈 링크는 클릭할 수 없는 회색 글씨로만 표시됩니다(깨진 링크 방지). icon 종류: shield, book, info, chat, bug, ad",
+    "name": "phone2pc (폰투피씨)",
+    "nameEn": "phone2pc",
+    "tagline": "앱 설치도 로그인도 없이, 폰으로 찍은 사진을 QR 한 번으로 PC 화면에 바로 띄우는 무료 서비스. 사진은 디스크에 저장하지 않고 서버 메모리에만 잠시 머물며, 「비우기」를 누르거나 30분이 지나면 지워집니다.",
+    "taglineEn": "A free service that puts the photo you just took on your PC screen with one QR scan — no app, no sign-in. Photos are never written to disk — they sit in server memory only, and are erased when you press Clear or after 30 minutes.",
+    "notice": "세션 주소를 아는 사람은 그 파일을 열 수 있습니다. PC로 받은 뒤에는 「비우기」를 눌러 주세요. 타인의 권리를 침해하거나 법령에 어긋나는 파일의 전송은 금지되며, 확인되면 이용이 제한될 수 있습니다.",
+    "noticeEn": "Anyone who knows a session address can open its files, so press Clear once your PC has them. Sending files that infringe on others' rights or break the law is not allowed and may result in access being blocked.",
+    "domain": "phone2pc.iuser.kr",
+    "domainUrl": "https://phone2pc.iuser.kr",
+    "copyright": "phone2pc (폰투피씨)",
+    "copyrightEn": "phone2pc",
+    "groups": [
+      {
+        "title": "법적 고지",
+        "titleEn": "Legal",
+        "links": [
+          { "label": "개인정보처리방침", "labelEn": "Privacy Policy", "url": "", "icon": "shield", "accent": true },
+          { "label": "서비스 이용약관", "labelEn": "Terms of Service", "url": "", "icon": "book" },
+          { "label": "이용안내·면책조항", "labelEn": "Disclaimer", "url": "", "icon": "info" }
+        ]
+      },
+      {
+        "title": "고객센터",
+        "titleEn": "Support",
+        "links": [
+          { "label": "문의·오류 제보", "labelEn": "Contact & bug reports", "url": "https://iuser.kr/g5/bbs/board.php?bo_table=phone2pc", "icon": "chat", "accent": true },
+          { "label": "광고·제휴 문의", "labelEn": "Advertising & partnerships", "url": "https://iuser.kr/g5/bbs/board.php?bo_table=phone2pc", "icon": "ad" }
+        ]
+      }
+    ]
+  },
+
+  "adsense": {
+    "_설명": "AdSense 승인 후 발급받은 값을 넣으세요. client는 ads.txt에도 함께 쓰입니다.",
+    "client": "",
+    "slotDesktop": "",
+    "slotMobile": ""
+  },
+
+  "naver": {
+    "_설명": "국내 접속에서만 보입니다. items 중 showCount개를 매번 무작위로 골라 보여줍니다. image는 비우면 썸네일 없이 글씨만 나갑니다. 이미지를 public/promo/ 에 두고 '/promo/파일명.jpg' 로 적는 방식을 권합니다(외부 주소는 언제든 막힐 수 있음).",
+    "title": "사진 옮길 때 같이 쓰면 좋은 것",
+    "showCount": 2,
+    "items": [
+      {
+        "badge": "육아",
+        "title": "브라운 귀 체온계 IRT6030",
+        "description": "아기 열 잴 때 귀에 대고 1초면 끝",
+        "image": "/promo/ear_1.jpg",
+        "url": "https://naver.me/F1a99P38"
+      },
+      {
+        "badge": "생활",
+        "title": "리스테린 쿨민트 가글 1L 3개",
+        "description": "입냄새 걱정 없이 하루를 개운하게",
+        "image": "/promo/listerine_1.jpg",
+        "url": "https://naver.me/FqIzz0FC"
+      },
+      {
+        "badge": "소품",
+        "title": "기계식 키보드 키캡 키링 4종",
+        "description": "손이 심심할 때 딸깍이는 스트레스 해소 장난감",
+        "image": "/promo/led_key_1.jpg",
+        "url": "https://naver.me/FJO33d33"
+      },
+      {
+        "badge": "보관",
+        "title": "플라이토 동물 USB 메모리 16GB",
+        "description": "PC로 옮긴 사진을 귀여운 USB에 담아 두기",
+        "image": "/promo/usb_1.jpg",
+        "url": "https://naver.me/5CC332iZ"
+      },
+      {
+        "badge": "저장",
+        "title": "삼성 870 EVO SSD 1TB",
+        "description": "사진·영상이 쌓일수록 든든한 내장 SSD",
+        "image": "/promo/evo_sata_ssd_1.jpg",
+        "url": "https://naver.me/xAfRRXVZ"
+      },
+      {
+        "badge": "데스크",
+        "title": "삼성 무선 버티컬 마우스 SM-M1300Q",
+        "description": "손목 부담을 덜어주는 인체공학 블루투스 마우스",
+        "image": "/promo/sam_m1300_1.jpg",
+        "url": "https://naver.me/xlbr57vE"
+      }
+    ]
+  }
+}

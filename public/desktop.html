@@ -3,69 +3,122 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>hp2pc — 폰에서 PC로 사진 보내기</title>
-<meta name="description" content="폰으로 QR을 찍고 사진을 고르면 PC 화면에 바로 뜹니다. 설치도 로그인도 필요 없습니다.">
+<title>Phone2PC - 휴대폰 사진을 PC로 바로 전송</title>
+<meta name="description" content="휴대폰 사진과 파일을 PC로 전송하세요. 앱 설치, 로그인, 이메일, 클라우드가 필요 없습니다. QR 코드를 스캔하고 바로 보내세요.">
+
+<!-- SEO 기본. 영어권 방문자에게는 /i18n.js 가 아래 값들을 영어로 바꿔 끼운다. -->
+<meta name="keywords" content="핸드폰 사진 PC로 옮기기, 휴대폰 사진 컴퓨터로 옮기기, 핸드폰 사진 컴퓨터로 보내기, 휴대폰 사진 PC 전송, 핸드폰 파일 PC로 보내기, 휴대폰 파일 컴퓨터로 옮기기, 휴대폰 사진 옮기기, 휴대폰 사진 전송, QR 사진 전송, 와이파이 파일 전송, 휴대폰 PC 파일 전송">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://phone2pc.iuser.kr/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Phone2PC">
+<meta property="og:url" content="https://phone2pc.iuser.kr/">
+<meta property="og:title" content="Phone2PC - 휴대폰 사진을 PC로 바로 전송">
+<meta property="og:description" content="휴대폰 사진과 파일을 PC로 바로 보내세요. 앱 설치, 로그인, 이메일, 클라우드가 필요 없습니다.">
+<meta property="og:image" content="https://phone2pc.iuser.kr/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Phone2PC — QR 코드를 찍어 휴대폰 사진을 PC로 전송">
+<meta property="og:locale" content="ko_KR">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Phone2PC - 휴대폰 사진을 PC로 바로 전송">
+<meta name="twitter:description" content="휴대폰 사진과 파일을 PC로 바로 보내세요. 앱 설치, 로그인, 이메일, 클라우드가 필요 없습니다.">
+<meta name="twitter:image" content="https://phone2pc.iuser.kr/og-image.png">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📥</text></svg>">
 <link rel="stylesheet" href="/app.css">
+<script src="/i18n-strings.js"></script>
+<script src="/i18n.js"></script>
+
+<!-- 구조화 데이터. 검색엔진에 "무료 웹 도구"라는 정체를 명시한다. /i18n.js 가 언어에 맞춰 고쳐 쓴다. -->
+<script type="application/ld+json" id="ldJson">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Phone2PC",
+  "url": "https://phone2pc.iuser.kr/",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Web browser",
+  "browserRequirements": "Requires JavaScript",
+  "inLanguage": "ko",
+  "description": "휴대폰 사진과 파일을 PC로 전송하세요. 앱 설치, 로그인, 이메일, 클라우드가 필요 없습니다. QR 코드를 스캔하고 바로 보내세요.",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "KRW" }
+}
+</script>
 </head>
 <body>
 
 <header class="top">
   <div class="brand">
-    <b>hp2pc</b>
-    <span>폰에서 찍은 사진을 이 PC로 바로</span>
+    <b>phone2pc</b>
   </div>
-  <div class="status" id="status"><span class="dot"></span><span id="statusText">준비 중…</span></div>
+  <div class="status" id="status"><span class="dot"></span><span id="statusText" data-i18n="d.status.booting">준비 중…</span></div>
 </header>
+
+<!-- 검색 유입과 첫 방문자를 위한 머리말. H1은 페이지에 하나만 둔다. -->
+<section class="hero">
+  <h1 data-i18n="d.h1">휴대폰 사진을 PC로 바로 전송</h1>
+  <p class="hero-lede" data-i18n-html="d.heroLede"><b>앱 설치 없이 휴대폰 사진을 PC로 바로 보내세요.</b><br>로그인도, 이메일도, 클라우드도 필요 없습니다. QR 코드를 찍고 바로 보내면 됩니다.</p>
+</section>
 
 <main class="layout">
   <section class="card qr-card">
-    <p class="step"><b>폰 카메라</b>로 아래 QR을 비추세요</p>
+    <p class="step" data-i18n-html="d.step"><b>폰 카메라</b>로 아래 QR을 비추세요</p>
 
-    <div class="qr-frame loading" id="qrFrame">QR 만드는 중…</div>
+    <div class="qr-frame loading" id="qrFrame" data-i18n="d.qr.making">QR 만드는 중…</div>
 
     <div class="url-row">
       <code id="urlText">–</code>
-      <button class="btn ghost small" id="copyUrl" title="주소 복사">복사</button>
+      <button class="btn ghost small" id="copyUrl" data-i18n="d.copy" data-i18n-title="d.copyUrlTitle" title="주소 복사">복사</button>
     </div>
 
-    <button class="btn" id="newSession" style="width:100%">새 QR 만들기</button>
+    <button class="btn" id="newSession" style="width:100%" data-i18n="d.newSession">새 QR 만들기</button>
 
     <details class="host-picker" id="hostRow" hidden>
-      <summary>폰에서 안 열리면 여기를 눌러 주소를 바꿔보세요</summary>
+      <summary data-i18n="d.hostSummary">폰에서 안 열리면 여기를 눌러 주소를 바꿔보세요</summary>
       <select id="hostSelect"></select>
-      <p class="hint" style="margin-top:8px">
+      <p class="hint" style="margin-top:8px" data-i18n="d.hostHint">
         네트워크 어댑터가 여러 개면 폰이 붙어 있는 와이파이와 같은 대역의 주소를 골라야 합니다.
       </p>
     </details>
 
     <div class="hint">
       <ul>
-        <li>폰에 앱을 깔 필요 없습니다. 기본 카메라로 QR만 비추면 됩니다.</li>
-        <li>사진은 <b>저장되지 않습니다.</b> 이 화면이 받아가면 서버에서 바로 지워집니다.</li>
-        <li>이 창을 닫으면 전송도 멈춥니다.</li>
+        <li data-i18n-html="d.hint1">폰에 앱을 깔 필요 없습니다. 기본 카메라로 QR만 비추면 됩니다.</li>
+        <li data-i18n-html="d.hint2">사진은 <b>저장되지 않습니다.</b> 이 화면이 받아가면 서버에서 바로 지워집니다.</li>
+        <li data-i18n-html="d.hint3">이 창을 닫으면 전송도 멈춥니다.</li>
       </ul>
     </div>
   </section>
 
   <section class="card files-card">
     <div class="files-head">
-      <h2>받은 파일<span class="count" id="count">0</span></h2>
-      <label class="auto-dl"><input type="checkbox" id="autoDownload"> 받는 즉시 자동 저장</label>
-      <button class="btn" id="zipBtn" disabled>전체 ZIP 저장</button>
-      <button class="btn danger" id="clearBtn" disabled>비우기</button>
+      <h2><span data-i18n="d.filesTitle">받은 파일</span><span class="count" id="count">0</span></h2>
+      <label class="auto-dl"><input type="checkbox" id="autoDownload"> <span data-i18n="d.autoSave">받는 즉시 자동 저장</span></label>
+      <button class="btn" id="zipBtn" disabled data-i18n="d.zip">전체 ZIP 저장</button>
+      <button class="btn danger" id="clearBtn" disabled data-i18n="d.clear">비우기</button>
     </div>
 
-    <div class="empty" id="empty">
+    <div class="empty" id="empty" data-i18n-html="d.empty">
       아직 받은 파일이 없습니다.<br>폰에서 QR을 찍고 사진을 고르면 여기에 바로 나타납니다.
     </div>
     <div class="grid" id="grid"></div>
   </section>
 </main>
 
+<!-- 서비스 소개. 검색엔진이 이 페이지의 정체를 판단하는 본문이다. -->
+<section class="about">
+  <h2 data-i18n="d.aboutTitle">Phone2PC란?</h2>
+  <p data-i18n="d.aboutLead">Phone2PC는 휴대폰 사진과 파일을 PC로 옮기는 가장 간단한 방법입니다.</p>
+  <p data-i18n="d.aboutBody">앱 설치도, 로그인도, 이메일도, 클라우드도 필요 없습니다. PC 화면에 뜬 QR 코드를 휴대폰으로 찍고 사진이나 파일을 고르면 PC로 바로 전송됩니다. 와이파이든 데이터든 상관없고, 보낸 파일은 PC가 받아가는 즉시 서버에서 지워집니다.</p>
+</section>
+
+<footer class="site-footer" id="siteFooter"></footer>
+
 <div class="toast" id="toast"></div>
 
 <script src="/qr.js"></script>
 <script src="/desktop.js"></script>
+<script src="/banners.js"></script>
 </body>
 </html>

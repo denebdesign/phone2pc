@@ -1,5 +1,5 @@
 {
-  "name": "hp2pc",
+  "name": "phone2pc",
   "version": "1.0.0",
   "private": true,
   "description": "폰에서 찍은 사진을 QR 한 번으로 PC로 옮기는 웹앱",

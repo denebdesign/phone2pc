@@ -4,17 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#3b5bdb">
-<title>PC로 보내기 — hp2pc</title>
+<title>PC로 보내기 — Phone2PC</title>
+
+<!-- /s/:id 는 1회용 세션 주소다. 검색엔진에 올라가면 안 되므로 색인을 막는다. -->
+<meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>📤</text></svg>">
 <link rel="stylesheet" href="/app.css">
+<script src="/i18n-strings.js"></script>
+<script src="/i18n.js"></script>
 </head>
-<body>
+<body class="mobile-page">
 
 <div class="m-wrap">
 
   <div class="m-head">
-    <b>PC로 보내기</b>
-    <p id="headNote">연결 확인 중…</p>
+    <b data-i18n="m.head">PC로 보내기</b>
+    <p id="headNote" data-i18n="m.checking">연결 확인 중…</p>
   </div>
 
   <div id="main" hidden>
@@ -22,32 +27,32 @@
       <button class="big-btn accent" id="cameraBtn">
         <span class="ico">📷</span>
         <span>
-          <span class="t">지금 찍어서 보내기</span><br>
-          <span class="d">카메라를 열어 바로 촬영합니다</span>
+          <span class="t" data-i18n="m.cameraT">지금 찍어서 보내기</span><br>
+          <span class="d" data-i18n="m.cameraD">카메라를 열어 바로 촬영합니다</span>
         </span>
       </button>
 
       <button class="big-btn" id="galleryBtn">
         <span class="ico">🖼️</span>
         <span>
-          <span class="t">앨범에서 고르기</span><br>
-          <span class="d">사진·동영상 여러 개를 한 번에</span>
+          <span class="t" data-i18n="m.galleryT">앨범에서 고르기</span><br>
+          <span class="d" data-i18n="m.galleryD">사진·동영상 여러 개를 한 번에</span>
         </span>
       </button>
 
       <button class="big-btn" id="fileBtn">
         <span class="ico">📎</span>
         <span>
-          <span class="t">파일 고르기</span><br>
-          <span class="d">PDF 등 다른 파일도 보낼 수 있어요</span>
+          <span class="t" data-i18n="m.fileT">파일 고르기</span><br>
+          <span class="d" data-i18n="m.fileD">PDF 등 다른 파일도 보낼 수 있어요</span>
         </span>
       </button>
     </div>
 
     <div class="card opt-row">
       <span>
-        원본 화질로 보내기<br>
-        <span class="d">기본은 긴 변 2048px로 줄여 빠르게 보냅니다. 켜면 원본 그대로 (용량 큼)</span>
+        <span data-i18n="m.originalT">원본 화질로 보내기</span><br>
+        <span class="d" data-i18n="m.originalD">평소엔 2048px로 줄여 빠르게 보냅니다</span>
       </span>
       <label class="switch">
         <input type="checkbox" id="original">
@@ -59,8 +64,8 @@
   </div>
 
   <div class="card notice" id="expired" hidden>
-    <b>세션이 만료되었습니다</b>
-    PC 화면에서 <b>새 QR 만들기</b>를 누른 뒤 다시 찍어 주세요.
+    <b data-i18n="m.expiredT">세션이 만료되었습니다</b>
+    <span data-i18n-html="m.expiredD">PC 화면에서 <b>새 QR 만들기</b>를 누른 뒤 다시 찍어 주세요.</span>
   </div>
 
   <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
@@ -68,6 +73,9 @@
   <input type="file" id="fileInput" multiple hidden>
 </div>
 
+<footer class="site-footer" id="siteFooter"></footer>
+
 <script src="/mobile.js"></script>
+<script src="/banners.js"></script>
 </body>
 </html>

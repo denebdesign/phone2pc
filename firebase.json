@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "phone2pc-iuser-kr",
     "public": "public",
     "ignore": [
       "firebase.json",
@@ -10,7 +11,7 @@
       {
         "source": "**",
         "run": {
-          "serviceId": "hp2pc",
+          "serviceId": "phone2pc",
           "region": "asia-northeast3"
         }
       }
@@ -20,6 +21,12 @@
         "source": "/*.@(css|js)",
         "headers": [
           { "key": "Cache-Control", "value": "public, max-age=3600" }
+        ]
+      },
+      {
+        "source": "**/*.@(jpg|jpeg|png|webp|gif|svg|ico)",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=2592000" }
         ]
       }
     ]

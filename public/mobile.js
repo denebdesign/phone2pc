@@ -7,6 +7,8 @@ const list = el('list');
 const headNote = el('headNote');
 const originalToggle = el('original');
 
+const T = (key, vars) => window.I18N.t(key, vars);
+
 const sessionId = location.pathname.split('/')[2] || '';
 const MAX_EDGE = 2048;        // 원본 끄기를 선택했을 때 줄일 최대 변 길이
 const JPEG_QUALITY = 0.85;
@@ -23,12 +25,12 @@ async function boot() {
     const res = await fetch(`/api/hello/${sessionId}`, { method: 'POST' });
     if (!res.ok) return showExpired();
   } catch (err) {
-    headNote.textContent = 'PC에 연결하지 못했습니다. 네트워크 상태를 확인해 주세요.';
+    headNote.textContent = T('m.noPc');
     return;
   }
   el('main').hidden = false;
-  headNote.textContent = 'PC와 연결되었습니다. 보낼 사진을 고르세요.';
-  originalToggle.checked = localStorage.getItem('hp2pc.original') === '1';
+  headNote.textContent = T('m.ready');
+  originalToggle.checked = localStorage.getItem('phone2pc.original') === '1';
 }
 
 function showExpired() {
@@ -41,7 +43,7 @@ function showExpired() {
 
 function enqueue(fileList) {
   for (const file of fileList) {
-    const item = { file, name: file.name || `사진-${Date.now()}.jpg`, row: null, bar: null, status: null };
+    const item = { file, name: file.name || `${T('m.photoName')}-${Date.now()}.jpg`, row: null, bar: null, status: null };
     queue.push(item);
     addRow(item);
   }
@@ -69,7 +71,7 @@ function addRow(item) {
   name.textContent = item.name;
   const status = document.createElement('div');
   status.className = 'st';
-  status.textContent = '대기 중';
+  status.textContent = T('m.queued');
   const bar = document.createElement('div');
   bar.className = 'bar';
   const fill = document.createElement('i');
@@ -89,17 +91,17 @@ async function pump() {
   while (queue.length > 0) {
     const item = queue.shift();
     try {
-      item.status.textContent = '준비 중…';
+      item.status.textContent = T('m.preparing');
       const payload = await prepare(item.file);
-      item.status.textContent = '보내는 중…';
+      item.status.textContent = T('m.sending');
       await upload(item, payload.blob, payload.name, payload.type);
-      item.status.textContent = '전송 완료';
+      item.status.textContent = T('m.sent');
       item.status.className = 'st done';
       item.bar.style.width = '100%';
       sentCount++;
-      headNote.textContent = `${sentCount}개 전송 완료 — PC 화면을 확인하세요.`;
+      headNote.textContent = T('m.sentCount', { n: sentCount });
     } catch (err) {
-      item.status.textContent = '실패: ' + err.message;
+      item.status.textContent = T('m.failedWith', { msg: err.message });
       item.status.className = 'st err';
     }
   }
@@ -112,7 +114,7 @@ async function prepare(file) {
     file.type !== 'image/gif' &&
     !originalToggle.checked;
   if (!isShrinkable) {
-    return { blob: file, name: file.name || `사진-${Date.now()}.jpg`, type: file.type || 'application/octet-stream' };
+    return { blob: file, name: file.name || `${T('m.photoName')}-${Date.now()}.jpg`, type: file.type || 'application/octet-stream' };
   }
 
   try {
@@ -126,12 +128,12 @@ async function prepare(file) {
     canvas.getContext('2d').drawImage(bitmap, 0, 0, width, height);
     bitmap.close();
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', JPEG_QUALITY));
-    if (!blob) throw new Error('변환 실패');
-    const base = (file.name || '사진').replace(/\.[^.]+$/, '');
+    if (!blob) throw new Error(T('m.convertFail'));
+    const base = (file.name || T('m.photoName')).replace(/\.[^.]+$/, '');
     return { blob, name: `${base}.jpg`, type: 'image/jpeg' };
   } catch (err) {
     // 변환에 실패하면 원본을 그대로 보낸다
-    return { blob: file, name: file.name || `사진-${Date.now()}.jpg`, type: file.type || 'application/octet-stream' };
+    return { blob: file, name: file.name || `${T('m.photoName')}-${Date.now()}.jpg`, type: file.type || 'application/octet-stream' };
   }
 }
 
@@ -150,14 +152,18 @@ function upload(item, blob, name, type) {
       if (xhr.status >= 200 && xhr.status < 300) return resolve();
       // 413은 서버가 연결을 끊으면서 본문이 안 올 수 있어 여기서 문구를 만든다
       let message = xhr.status === 413
-        ? '파일이 너무 큽니다. 원본 화질을 꺼 주세요.'
-        : `서버 오류 (${xhr.status})`;
-      try { message = JSON.parse(xhr.responseText).error || message; } catch (_) { /* 그대로 둔다 */ }
+        ? T('m.tooBig')
+        : T('m.serverError', { code: xhr.status });
+      // 서버는 한국어(error)와 영어(error_en)를 함께 보낸다
+      try {
+        const body = JSON.parse(xhr.responseText);
+        message = (window.I18N.lang === 'en' && body.error_en) || body.error || message;
+      } catch (_) { /* 그대로 둔다 */ }
       if (xhr.status === 404) showExpired();
       reject(new Error(message));
     };
-    xhr.onerror = () => reject(new Error('연결이 끊겼습니다'));
-    xhr.onabort = () => reject(new Error('취소됨'));
+    xhr.onerror = () => reject(new Error(T('m.disconnected')));
+    xhr.onabort = () => reject(new Error(T('m.canceled')));
     xhr.send(blob);
   });
 }
@@ -178,7 +184,7 @@ wire('galleryBtn', 'galleryInput');
 wire('fileBtn', 'fileInput');
 
 originalToggle.onchange = () => {
-  localStorage.setItem('hp2pc.original', originalToggle.checked ? '1' : '0');
+  localStorage.setItem('phone2pc.original', originalToggle.checked ? '1' : '0');
 };
 
 boot();
