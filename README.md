@@ -16,36 +16,66 @@ node server.js
 
 ## 배포 (Firebase Hosting + Cloud Run)
 
-`git push` → Cloud Run 자동 배포가 설정돼 있다면 코드만 올리면 됩니다.
+**자동 배포는 걸려 있지 않습니다.** `git push` 만으로는 서비스가 바뀌지 않으니,
+아래 세 단계를 순서대로 직접 실행합니다.
 
-### 1. Cloud Run
+> **Windows에서는 `gcloud.cmd` / `firebase.cmd` 로 부릅니다.**
+> PowerShell 실행 정책이 기본값(Restricted)이면 `gcloud` 는 `gcloud.ps1` 을 타다 막힙니다.
+> `.cmd` 는 cmd.exe가 실행하므로 정책과 무관합니다. 실행 정책을 바꿀 필요는 없습니다.
 
-`Dockerfile` 이 그대로 쓰입니다. 빌드 단계가 없어서 이미지가 가볍습니다.
+> **`--source .` 는 반드시 프로젝트 폴더에서.**
+> 현재 폴더를 통째로 올리는 옵션입니다. 다른 곳(예: Cloud Shell 홈)에서 실행하면
+> 엉뚱한 소스가 올라가 `COPY failed: no source files were specified` 로 빌드가 깨집니다.
+> Cloud Shell에서 하려면 `git clone` 후 그 폴더로 `cd` 한 뒤 실행하세요.
 
-> **`--max-instances=1` 은 필수입니다.**
+### 1. GitHub (소스 보관)
+
+```bash
+git add -A
+git commit -m "설명"
+git push origin main
+```
+
+배포에 꼭 필요하지는 않지만, 먼저 올려 두면 어느 코드가 서비스 중인지 나중에 확인할 수 있습니다.
+
+### 2. Cloud Run (서버)
+
+`Dockerfile` 이 그대로 쓰입니다. 빌드 단계가 없어서 이미지가 가볍습니다. 3~5분 걸립니다.
+
+```bash
+gcloud.cmd run deploy phone2pc --source . --region asia-northeast3 --allow-unauthenticated --max-instances 1 --memory 512Mi --timeout 120
+```
+
+> **`--max-instances 1` 은 필수입니다.**
 > 세션이 인스턴스 메모리에만 있어서, 인스턴스가 2개 이상이면 폰이 업로드한 인스턴스와
 > PC가 폴링하는 인스턴스가 갈려 "사진을 보냈는데 PC에 안 뜨는" 현상이 생깁니다.
 > 세션 어피니티로는 해결되지 않습니다 — 폰과 PC는 서로 다른 클라이언트라 각자 다른 인스턴스에 붙습니다.
 
-```bash
-gcloud run deploy phone2pc \
-  --source . \
-  --region asia-northeast3 \
-  --allow-unauthenticated \
-  --max-instances 1 \
-  --memory 512Mi \
-  --timeout 120
-```
-
-콘솔에서 GitHub 연속 배포를 이미 걸어두셨다면, **서비스 설정에서 최대 인스턴스만 1로** 맞춰주시면 됩니다.
-
-### 2. Firebase Hosting
+### 3. Firebase Hosting (정적 파일)
 
 ```bash
-firebase deploy --only hosting
+firebase.cmd deploy --only hosting
 ```
 
 `firebase.json` 이 `public/` 을 CDN으로 서빙하고 나머지 모든 경로를 Cloud Run(`phone2pc`, `asia-northeast3`)으로 넘깁니다.
+
+**반드시 Cloud Run 다음에 실행하세요.** 순서를 바꾸면 `/ko`, `/en` 처럼 서버가 만드는 주소가
+잠깐 404가 됩니다.
+
+### 4. 배포 확인
+
+```bash
+curl -s -o /dev/null -w "%{http_code} " https://phone2pc.iuser.kr/ko https://phone2pc.iuser.kr/en https://phone2pc.iuser.kr/og-image.png https://phone2pc.iuser.kr/sitemap.xml
+```
+
+`200 200 200 200` 이면 정상입니다. 언어 협상은 이렇게 봅니다.
+
+```bash
+curl -s -H "Accept-Language: en-US" https://phone2pc.iuser.kr/ | grep -o "<title>[^<]*"
+```
+
+첫 화면 문구나 공유 카드를 바꿨다면 [카카오 OG 캐시 초기화](https://developers.kakao.com/tool/clear/og)도
+해주세요. 안 하면 카톡 공유 카드에 옛 내용이 그대로 남습니다.
 
 ## 동작 방식
 
