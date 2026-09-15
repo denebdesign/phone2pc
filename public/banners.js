@@ -12,12 +12,30 @@
   const T = (key, vars) => window.I18N.t(key, vars);
   const P = (source, field) => window.I18N.pick(source, field);
 
-  fetch('/api/ads')
-    .then((r) => r.json())
-    .then(render)
-    .catch(() => { /* 배너를 못 불러와도 서비스 본체는 그대로 동작해야 한다 */ });
+  function loadJson(url) {
+    return fetch(url).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  }
 
-  function render(config) {
+  /**
+   * 회사정보와 광고 설정을 따로 불러온다.
+   *
+   * 광고 차단기를 쓰면 /api/ads 요청이 막힌다. 한 번에 받아 오면 그때 하단 전체가
+   * 사라져서 약관·문의 링크까지 없어진다. 광고는 못 받아도 회사정보는 항상 그린다.
+   */
+  Promise.all([loadJson('/api/site'), loadJson('/api/ads')])
+    .then(([siteConfig, ads]) => {
+      const site = (siteConfig && siteConfig.site) || (ads && ads.site) || {};
+      render(ads, site);
+    })
+    .catch(() => { /* 하단을 못 그려도 서비스 본체는 그대로 동작해야 한다 */ });
+
+  function render(config, site) {
+    // 광고 설정을 못 받았으면(차단기 등) 광고 자리는 아예 만들지 않는다
+    if (config) mount.appendChild(adsPart(config));
+    mount.appendChild(siteInfo(site));
+  }
+
+  function adsPart(config) {
     const naver = config.naver || {};
     const items = Array.isArray(naver.items) ? naver.items : [];
     const adsense = config.adsense || {};
@@ -38,11 +56,8 @@
     if (shown.length > 0) top.appendChild(naverSection(naver, shown));
     top.appendChild(adSection(adsense.client, slot));
 
-    const frag = document.createDocumentFragment();
-    frag.append(top, siteInfo(config.site || {}));
-    mount.appendChild(frag);
-
     if (adsense.client && slot) loadAdsense(adsense.client);
+    return top;
   }
 
   // ------------------------------------------------------- 네이버 쇼핑 커넥트

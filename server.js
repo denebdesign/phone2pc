@@ -328,6 +328,19 @@ if (!IS_CLOUD) {
   });
 }
 
+/**
+ * 하단 회사정보·법적 고지.
+ *
+ * 광고 차단기는 주소에 'ads'가 들어간 요청을 막는다. 그런데 회사정보와 약관 링크가
+ * 같은 응답에 실려 있으면 광고를 막는 순간 하단이 통째로 사라진다. 광고가 아닌 것은
+ * 광고와 분리해 둔다.
+ */
+app.get('/api/site', (req, res) => {
+  const config = IS_CLOUD ? bannersCache : loadBanners();
+  res.set('Cache-Control', IS_CLOUD ? 'public, max-age=600' : 'no-store');
+  res.json({ site: config.site || {} });
+});
+
 // AdSense가 소유권 확인에 쓰는 파일. 도메인 루트에서 열려야 한다.
 app.get('/ads.txt', (req, res) => {
   const client = (IS_CLOUD ? bannersCache : loadBanners()).adsense.client || '';
