@@ -461,8 +461,35 @@ function checkTranslations(file) {
 }
 ['desktop.html', 'mobile.html'].forEach(checkTranslations);
 
+/**
+ * 정적 파일 주소에 붙일 판 번호.
+ *
+ * Firebase Hosting은 js/css를 1시간 캐시한다. 그래서 배포 직후에는 브라우저가
+ * 새 mobile.js와 옛 i18n-strings.js를 섞어 들고 있을 수 있고, 그러면 화면에
+ * 'm.progress' 같은 문구표 키가 그대로 나온다. 파일 내용이 바뀌면 주소도 바뀌게 해서
+ * 섞이지 않도록 한다. (HTML 자체는 5분 캐시라 금방 새 주소를 가리킨다.)
+ */
+const VERSIONED_ASSETS = ['app.css', 'i18n-strings.js', 'i18n.js', 'desktop.js', 'mobile.js', 'banners.js', 'qr.js'];
+const ASSET_VERSION = (() => {
+  const hash = crypto.createHash('sha1');
+  for (const name of VERSIONED_ASSETS) {
+    try {
+      hash.update(fs.readFileSync(path.join(PUBLIC_DIR, name)));
+    } catch (err) {
+      console.warn(`판 번호 계산에서 빠진 파일: ${name} (${err.code})`);
+    }
+  }
+  return hash.digest('hex').slice(0, 8);
+})();
+
+const ASSET_RE = new RegExp(
+  '(src|href)="/(' + VERSIONED_ASSETS.map((n) => n.replace('.', '\\.')).join('|') + ')"', 'g'
+);
+
 function renderPage(file, lang, canonicalPath) {
   let html = fs.readFileSync(path.join(PUBLIC_DIR, file), 'utf8');
+
+  html = html.replace(ASSET_RE, (whole, attr, name) => `${attr}="/${name}?v=${ASSET_VERSION}"`);
 
   if (lang === 'en') html = toEnglish(html);
 
