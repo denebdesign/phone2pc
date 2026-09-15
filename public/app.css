@@ -286,6 +286,8 @@ details.host-picker select {
   font-weight: 700;
   margin-left: 8px;
 }
+/* 한 세션 한도에 가까워지면 색으로 알려준다 */
+.files-head .count.warn { background: rgba(240, 140, 0, .16); color: #b25e00; }
 .auto-dl {
   display: inline-flex; align-items: center; gap: 7px;
   font-size: 13px; color: var(--muted); cursor: pointer;
@@ -447,6 +449,13 @@ details.host-picker select {
 }
 .switch input:checked ~ .track { background: var(--accent); }
 .switch input:checked ~ .knob { transform: translateX(21px); }
+
+/* 여러 장을 한 번에 보낼 때 위에 고정으로 뜨는 진행 상황 카드 */
+.m-progress { display: grid; gap: 10px; padding: 16px 18px; margin-bottom: 16px; }
+.m-progress b { font-size: 14px; letter-spacing: -.2px; }
+.m-progress .note { margin: 0; font-size: 12.5px; line-height: 1.5; color: #b25e00; }
+.m-progress .bar { margin-top: 0; }
+.m-progress .btn { width: 100%; }
 
 .m-list { display: grid; gap: 12px; }
 .m-item { display: flex; align-items: center; gap: 14px; padding: 12px 14px; }

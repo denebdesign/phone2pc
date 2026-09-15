@@ -60,6 +60,15 @@
       </label>
     </div>
 
+    <!-- 여러 장을 한 번에 보낼 때의 진행 상황. 문구는 mobile.js가 채운다. -->
+    <div class="card m-progress" id="progressCard" hidden>
+      <b id="progressNote"></b>
+      <!-- 한도 때문에 담지 못한 장수 안내. 진행 문구에 덮이지 않게 따로 둔다. -->
+      <p class="note" id="limitNote" hidden></p>
+      <div class="bar"><i id="progressFill"></i></div>
+      <button class="btn" id="retryBtn" hidden></button>
+    </div>
+
     <div class="m-list" id="list"></div>
   </div>
 

@@ -28,11 +28,33 @@ const SITE_ORIGIN = (process.env.SITE_ORIGIN || 'https://phone2pc.iuser.kr').rep
 const IS_CLOUD = Boolean(process.env.K_SERVICE);
 
 const MB = 1024 * 1024;
+const GB = 1024 * MB;
 const MAX_FILE_BYTES = Number(process.env.MAX_FILE_MB || 20) * MB;
-const MAX_SESSION_BYTES = Number(process.env.MAX_SESSION_MB || 80) * MB;
-const MAX_TOTAL_BYTES = Number(process.env.MAX_TOTAL_MB || 320) * MB;  // 컨테이너 메모리 대비 여유분
-const MAX_ITEMS_PER_SESSION = Number(process.env.MAX_ITEMS || 40);
+const MAX_SESSION_BYTES = Number(process.env.MAX_SESSION_MB || 150) * MB;
+const MAX_TOTAL_BYTES = Number(process.env.MAX_TOTAL_MB || 500) * MB;  // 컨테이너 메모리 대비 여유분
+const MAX_ITEMS_PER_SESSION = Number(process.env.MAX_ITEMS || 120);
 const SESSION_TTL_MS = Number(process.env.SESSION_TTL_MIN || 30) * 60 * 1000;
+
+/**
+ * 원본 화질은 장당 3~5MB라 100장이면 세션 하나가 400MB를 넘는다. 축소 모드(2048px)만
+ * 대량 전송을 허용하고, 원본은 지금까지처럼 소량으로 묶는다. 폰이 X-Shrunk 헤더로 알려준다.
+ */
+const MAX_ORIGINAL_ITEMS = Number(process.env.MAX_ORIGINAL_ITEMS || 20);
+
+// PC 목록에 쓸 작은 미리보기. 원본을 미리보기로 쓰면 같은 사진이 두 번 나가서 전송비가 두 배가 된다.
+const MAX_THUMB_BYTES = 256 * 1024;
+
+/**
+ * 남용·비용 방어 한도. 로그인이 없어 사용자를 구분할 수단이 IP뿐이다.
+ * 인스턴스를 1개로 묶어 두었으므로 이 메모리 카운터만으로 전체를 통제할 수 있다.
+ */
+const SESSIONS_PER_IP_HOUR = Number(process.env.SESSIONS_PER_IP_HOUR || 30);
+const UPLOAD_GB_PER_IP_DAY = Number(process.env.UPLOAD_GB_PER_IP_DAY || 3);
+const DAILY_EGRESS_GB = Number(process.env.DAILY_EGRESS_GB || 6);   // 월 $30 예산에 맞춘 값
+const STATS_TOKEN = process.env.STATS_TOKEN || '';
+
+// 메모리가 모자랄 때, 지금 한창 주고받는 세션은 마지막까지 건드리지 않는다
+const IDLE_EVICT_MS = 60 * 1000;
 
 const ID_ALPHABET = 'abcdefghjkmnpqrstuvwxyz23456789';  // 헷갈리는 글자(i, l, o, 0, 1) 제외
 
@@ -66,19 +88,32 @@ function randomId(len) {
   return out;
 }
 
-function createSession() {
+function createSession(ip) {
   let id;
   do { id = randomId(12); } while (sessions.has(id));
   const session = {
     id,
+    ip: ip || 'unknown',
     createdAt: Date.now(),
     lastSeen: Date.now(),
     phoneSeen: false,
     items: [],
-    bytes: 0
+    bytes: 0,
+    originals: 0
   };
   sessions.set(id, session);
   return session;
+}
+
+/** 항목 하나를 지우고 용량 장부를 맞춘다. 저장 완료 후 자동 삭제와 수동 삭제가 함께 쓴다. */
+function removeItem(session, itemId) {
+  const index = session.items.findIndex((f) => f.id === itemId);
+  if (index === -1) return null;
+  const [item] = session.items.splice(index, 1);
+  session.bytes -= item.size + (item.thumb ? item.thumb.length : 0);
+  totalBytes -= item.size + (item.thumb ? item.thumb.length : 0);
+  if (item.original) session.originals = Math.max(0, session.originals - 1);
+  return item;
 }
 
 function dropSession(session) {
@@ -88,16 +123,105 @@ function dropSession(session) {
   session.bytes = 0;
 }
 
-/** 전체 메모리가 상한에 닿으면 오래 안 쓴 세션부터 버린다. */
-function makeRoom(incoming) {
+/**
+ * 전체 메모리가 상한에 닿으면 오래 안 쓴 세션부터 버린다.
+ *
+ * 남의 사진을 지우는 일이라 순서가 중요하다. 먼저 1분 넘게 조용한 세션만 고르고,
+ * 그걸로도 모자랄 때만 최근 세션까지 손댄다. 지금 사진을 올리는 중인 세션(keep)은
+ * 어떤 경우에도 건드리지 않는다.
+ */
+function makeRoom(incoming, keep) {
   if (totalBytes + incoming <= MAX_TOTAL_BYTES) return true;
-  const byAge = [...sessions.values()].sort((a, b) => a.lastSeen - b.lastSeen);
-  for (const session of byAge) {
-    if (totalBytes + incoming <= MAX_TOTAL_BYTES) break;
-    if (session.bytes === 0) continue;
-    dropSession(session);
+  const now = Date.now();
+  const candidates = [...sessions.values()]
+    .filter((s) => s !== keep && s.bytes > 0)
+    .sort((a, b) => a.lastSeen - b.lastSeen);
+
+  for (const minIdle of [IDLE_EVICT_MS, 0]) {
+    for (const session of candidates) {
+      if (totalBytes + incoming <= MAX_TOTAL_BYTES) return true;
+      if (!sessions.has(session.id)) continue;
+      if (now - session.lastSeen < minIdle) continue;
+      console.warn(`메모리 확보를 위해 세션을 버렸습니다: ${session.id} (${Math.round(session.bytes / MB)}MB)`);
+      dropSession(session);
+    }
   }
   return totalBytes + incoming <= MAX_TOTAL_BYTES;
+}
+
+// -------------------------------------------------- 비용·남용 방어 (카운터)
+
+/**
+ * 공개 서비스라 로그인이 없다. 한 사람이 서버 메모리나 전송 비용을 독점하지 못하도록
+ * 세 가지를 센다.
+ *   1) IP당 세션 생성 수  — 스크립트로 QR을 찍어내는 것을 막는다
+ *   2) IP당 하루 업로드량 — 한 사람이 저장소를 차지하는 것을 막는다
+ *   3) 하루 전체 전송량   — 월 예산을 넘지 않게 한다. 넘으면 새 세션만 막고,
+ *                          이미 사진을 보내는 중인 사람은 끝까지 마치게 둔다.
+ */
+const ipSessionWindow = new Map();   // ip -> { count, resetAt }
+const ipUploadDay = new Map();       // ip -> { bytes, day }
+let egressDay = utcDay();
+let egressBytes = 0;
+
+// Firebase Hosting의 무료 전송 한도가 UTC 하루 기준이라 같은 시계를 쓴다
+function utcDay() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function clientIp(req) {
+  const raw = String(req.ip || (req.socket && req.socket.remoteAddress) || '');
+  return raw.replace(/^::ffff:/, '') || 'unknown';
+}
+
+function rollDay() {
+  const day = utcDay();
+  if (egressDay === day) return day;
+  egressDay = day;
+  egressBytes = 0;
+  ipUploadDay.clear();
+  return day;
+}
+
+function noteEgress(bytes) {
+  rollDay();
+  egressBytes += bytes;
+}
+
+/** 응답이 실제로 나간 뒤에 전송량을 더한다. 중간에 끊긴 요청은 세지 않는다. */
+function countWhenSent(res, bytes) {
+  res.on('finish', () => noteEgress(bytes));
+}
+
+function egressExceeded() {
+  rollDay();
+  return egressBytes >= DAILY_EGRESS_GB * GB;
+}
+
+/** IP당 시간당 세션 생성 수. 한도를 넘으면 false. */
+function takeSessionSlot(ip) {
+  const now = Date.now();
+  const entry = ipSessionWindow.get(ip);
+  if (!entry || now >= entry.resetAt) {
+    ipSessionWindow.set(ip, { count: 1, resetAt: now + 60 * 60 * 1000 });
+    return true;
+  }
+  if (entry.count >= SESSIONS_PER_IP_HOUR) return false;
+  entry.count++;
+  return true;
+}
+
+/** IP당 하루 업로드 총량. 한도를 넘으면 false. */
+function takeUploadQuota(ip, bytes) {
+  const day = rollDay();
+  const entry = ipUploadDay.get(ip);
+  if (!entry || entry.day !== day) {
+    ipUploadDay.set(ip, { bytes, day });
+    return true;
+  }
+  if (entry.bytes + bytes > UPLOAD_GB_PER_IP_DAY * GB) return false;
+  entry.bytes += bytes;
+  return true;
 }
 
 setInterval(() => {
@@ -105,6 +229,10 @@ setInterval(() => {
   for (const session of [...sessions.values()]) {
     if (now - session.lastSeen > SESSION_TTL_MS) dropSession(session);
   }
+  for (const [ip, entry] of ipSessionWindow) {
+    if (now >= entry.resetAt) ipSessionWindow.delete(ip);
+  }
+  rollDay();
 }, 60 * 1000).unref();
 
 // ------------------------------------------------------------------ 유틸리티
@@ -137,7 +265,24 @@ function safeName(raw) {
 }
 
 function publicMeta(item) {
-  return { id: item.id, name: item.name, type: item.type, size: item.size, at: item.at };
+  return {
+    id: item.id,
+    name: item.name,
+    type: item.type,
+    size: item.size,
+    at: item.at,
+    thumb: Boolean(item.thumb)
+  };
+}
+
+/** 화면이 미리 알아야 하는 한도. 폰이 100장을 고르기 전에 안내할 수 있게 함께 내려준다. */
+function limitsInfo() {
+  return {
+    maxItems: MAX_ITEMS_PER_SESSION,
+    maxOriginalItems: MAX_ORIGINAL_ITEMS,
+    maxFileMB: Math.round(MAX_FILE_BYTES / MB),
+    maxSessionMB: Math.round(MAX_SESSION_BYTES / MB)
+  };
 }
 
 // --------------------------------------------------------------------- 라우팅
@@ -376,8 +521,24 @@ app.get('/api/net', (req, res) => {
 });
 
 app.post('/api/session', (req, res) => {
-  const session = createSession();
-  res.json({ id: session.id });
+  const ip = clientIp(req);
+
+  // 하루 전송 예산을 넘겼다면 새 전송만 막는다. 진행 중인 세션은 끝까지 마치게 둔다.
+  if (egressExceeded()) {
+    return res.status(503).json({
+      error: '오늘 전송량이 많아 새 전송을 잠시 받지 못합니다. 내일 다시 이용해 주세요.',
+      error_en: 'Today’s transfer budget is used up. New transfers will be available again tomorrow.'
+    });
+  }
+  if (!takeSessionSlot(ip)) {
+    return res.status(429).json({
+      error: '짧은 시간에 QR을 너무 많이 만들었습니다. 잠시 뒤에 다시 시도해 주세요.',
+      error_en: 'Too many QR codes created in a short time. Please try again later.'
+    });
+  }
+
+  const session = createSession(ip);
+  res.json({ id: session.id, limits: limitsInfo() });
 });
 
 // 세션을 찾아 lastSeen을 갱신한다. 없으면 404를 내고 null을 돌려준다.
@@ -410,7 +571,7 @@ app.post('/api/hello/:id', (req, res) => {
   const session = requireSession(req, res);
   if (!session) return;
   session.phoneSeen = true;
-  res.json({ ok: true });
+  res.json({ ok: true, limits: limitsInfo(), sent: session.items.length });
 });
 
 // 폰이 사진을 올린다. base64가 아니라 raw 바이트로 받는다(용량 33% 절약).
@@ -429,8 +590,17 @@ app.post('/api/upload/:id',
     }
     if (session.items.length >= MAX_ITEMS_PER_SESSION) {
       return res.status(409).json({
-        error: `한 세션에 최대 ${MAX_ITEMS_PER_SESSION}장까지 보낼 수 있습니다.`,
-        error_en: `A session can hold up to ${MAX_ITEMS_PER_SESSION} files.`
+        error: `한 세션에 최대 ${MAX_ITEMS_PER_SESSION}장까지 보낼 수 있습니다. PC에서 저장한 뒤 새 QR로 이어서 보내 주세요.`,
+        error_en: `A session can hold up to ${MAX_ITEMS_PER_SESSION} files. Save them on your PC, then continue with a new QR code.`
+      });
+    }
+
+    // 폰이 2048px로 줄여 보낸 것인지. 옛 버전 화면이나 직접 호출은 원본으로 본다.
+    const shrunk = req.get('x-shrunk') === '1';
+    if (!shrunk && session.originals >= MAX_ORIGINAL_ITEMS) {
+      return res.status(409).json({
+        error: `원본 화질은 한 세션에 ${MAX_ORIGINAL_ITEMS}장까지입니다. 많이 보내려면 「원본 화질로 보내기」를 꺼 주세요.`,
+        error_en: `Original quality is limited to ${MAX_ORIGINAL_ITEMS} files per session. Turn off “Send at original quality” to send more.`
       });
     }
     if (session.bytes + data.length > MAX_SESSION_BYTES) {
@@ -439,7 +609,13 @@ app.post('/api/upload/:id',
         error_en: `Session limit (${Math.round(MAX_SESSION_BYTES / MB)}MB) reached. Save the files on your PC, then clear them.`
       });
     }
-    if (!makeRoom(data.length)) {
+    if (!takeUploadQuota(clientIp(req), data.length)) {
+      return res.status(429).json({
+        error: `하루 업로드 한도(${UPLOAD_GB_PER_IP_DAY}GB)를 넘었습니다. 내일 다시 이용해 주세요.`,
+        error_en: `Daily upload limit (${UPLOAD_GB_PER_IP_DAY}GB) reached. Please try again tomorrow.`
+      });
+    }
+    if (!makeRoom(data.length, session)) {
       return res.status(503).json({
         error: '서버가 혼잡합니다. 잠시 뒤 다시 시도해 주세요.',
         error_en: 'The server is busy. Please try again in a moment.'
@@ -454,14 +630,59 @@ app.post('/api/upload/:id',
       ? declaredType
       : (MIME_BY_EXT[ext] || 'application/octet-stream');
 
-    const item = { id: randomId(14), name, type, size: data.length, at: Date.now(), data };
+    const item = {
+      id: randomId(14),
+      name, type,
+      size: data.length,
+      at: Date.now(),
+      data,
+      thumb: null,
+      original: !shrunk
+    };
     session.items.push(item);
     session.bytes += data.length;
     totalBytes += data.length;
+    if (item.original) session.originals++;
     session.phoneSeen = true;
 
     res.json({ ok: true, file: publicMeta(item) });
   });
+
+/**
+ * 폰이 만들어 보내는 작은 미리보기.
+ *
+ * PC 목록이 원본 이미지를 미리보기로 쓰면 같은 사진이 두 번 나간다(미리보기 + 저장).
+ * 100장이면 그것만으로 전송량이 두 배가 되므로, 폰에서 한 번 줄인 것을 함께 받아 둔다.
+ */
+app.post('/api/thumb/:id/:fileId',
+  express.raw({ type: () => true, limit: MAX_THUMB_BYTES }),
+  (req, res) => {
+    const session = requireSession(req, res);
+    if (!session) return;
+    const item = session.items.find((f) => f.id === req.params.fileId);
+    if (!item) return res.status(404).json({ error: '파일을 찾을 수 없습니다.', error_en: 'File not found.' });
+
+    const data = req.body;
+    if (!Buffer.isBuffer(data) || data.length === 0 || item.thumb) return res.json({ ok: true });
+
+    item.thumb = data;
+    session.bytes += data.length;
+    totalBytes += data.length;
+    res.json({ ok: true });
+  });
+
+// PC 목록이 쓰는 주소. 미리보기가 없으면 원본을 그대로 준다(옛 폰 화면 대비).
+app.get('/api/thumb/:id/:fileId', (req, res) => {
+  const session = requireSession(req, res);
+  if (!session) return;
+  const item = session.items.find((f) => f.id === req.params.fileId);
+  if (!item) return res.status(404).json({ error: '파일을 찾을 수 없습니다.', error_en: 'File not found.' });
+
+  const body = item.thumb || item.data;
+  res.set('Cache-Control', 'private, max-age=300');
+  countWhenSent(res, body.length);
+  res.type(item.thumb ? 'image/jpeg' : item.type).send(body);
+});
 
 app.get('/api/file/:id/:fileId', (req, res) => {
   const session = requireSession(req, res);
@@ -474,20 +695,24 @@ app.get('/api/file/:id/:fileId', (req, res) => {
     res.set('Content-Disposition',
       `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(item.name)}`);
     res.set('Cache-Control', 'no-store');
+
+    // PC가 저장을 마치면 서버에서 지운다. 메모리를 오래 붙잡지 않는 가장 큰 장치다.
+    if (req.query.once === '1') {
+      res.on('finish', () => removeItem(session, item.id));
+    }
   } else {
     res.set('Cache-Control', 'private, max-age=300');
   }
+  countWhenSent(res, item.size);
   res.type(item.type).send(item.data);
 });
 
 app.delete('/api/file/:id/:fileId', (req, res) => {
   const session = requireSession(req, res);
   if (!session) return;
-  const index = session.items.findIndex((f) => f.id === req.params.fileId);
-  if (index === -1) return res.status(404).json({ error: '파일을 찾을 수 없습니다.', error_en: 'File not found.' });
-  const [item] = session.items.splice(index, 1);
-  session.bytes -= item.size;
-  totalBytes -= item.size;
+  if (!removeItem(session, req.params.fileId)) {
+    return res.status(404).json({ error: '파일을 찾을 수 없습니다.', error_en: 'File not found.' });
+  }
   res.json({ ok: true });
 });
 
@@ -498,6 +723,7 @@ app.post('/api/clear/:id', (req, res) => {
   totalBytes -= session.bytes;
   session.items.length = 0;
   session.bytes = 0;
+  session.originals = 0;
   res.json({ ok: true, removed });
 });
 
@@ -513,19 +739,54 @@ app.get('/api/zip/:id', async (req, res) => {
   const zipName = `phone2pc-${stamp.getFullYear()}${pad(stamp.getMonth() + 1)}${pad(stamp.getDate())}` +
     `-${pad(stamp.getHours())}${pad(stamp.getMinutes())}.zip`;
 
+  // 스트리밍 도중에 목록이 바뀌어도 되도록 지금 시점의 항목을 붙잡아 둔다
+  const entries = session.items.slice();
+  const bytes = entries.reduce((sum, f) => sum + f.size, 0);
+
   res.writeHead(200, {
     'Content-Type': 'application/zip',
     'Cache-Control': 'no-store',
     'Content-Disposition': `attachment; filename="${zipName}"`
   });
 
+  // ZIP이 끝까지 나간 것만 "저장 완료"로 본다. 중간에 끊기면 파일을 남겨 둔다.
+  if (req.query.once === '1') {
+    res.on('finish', () => {
+      for (const item of entries) removeItem(session, item.id);
+    });
+  }
+  countWhenSent(res, bytes);
+
   try {
-    await writeZip(res, session.items.map((f) => ({ data: f.data, name: f.name, mtime: new Date(f.at) })));
+    await writeZip(res, entries.map((f) => ({ data: f.data, name: f.name, mtime: new Date(f.at) })));
     res.end();
   } catch (err) {
     console.error('ZIP 생성 실패:', err);
     res.destroy();
   }
+});
+
+/**
+ * 운영 상태 확인용. 비용 이상을 눈으로 확인할 때 쓴다.
+ * STATS_TOKEN 환경변수를 설정하면 ?token= 이 맞아야 열린다.
+ */
+app.get('/api/stats', (req, res) => {
+  if (STATS_TOKEN && req.query.token !== STATS_TOKEN) {
+    return res.status(404).json({ error: '없는 경로입니다.', error_en: 'No such endpoint.' });
+  }
+  rollDay();
+  res.set('Cache-Control', 'no-store');
+  res.json({
+    day: egressDay,
+    sessions: sessions.size,
+    items: [...sessions.values()].reduce((sum, s) => sum + s.items.length, 0),
+    heldMB: Math.round(totalBytes / MB),
+    heldLimitMB: Math.round(MAX_TOTAL_BYTES / MB),
+    egressTodayMB: Math.round(egressBytes / MB),
+    egressLimitMB: DAILY_EGRESS_GB * 1024,
+    uptimeMin: Math.round(process.uptime() / 60),
+    rssMB: Math.round(process.memoryUsage().rss / MB)
+  });
 });
 
 app.use('/api', (req, res) => res.status(404).json({ error: '없는 경로입니다.', error_en: 'No such endpoint.' }));
@@ -547,6 +808,9 @@ app.use((err, req, res, next) => {
 const server = app.listen(PORT, '0.0.0.0', () => {
   if (IS_CLOUD) {
     console.log(`phone2pc listening on ${PORT} (service=${process.env.K_SERVICE}, revision=${process.env.K_REVISION})`);
+    console.log(`한도: ${MAX_ITEMS_PER_SESSION}장/세션, 원본 ${MAX_ORIGINAL_ITEMS}장, 세션 ${Math.round(MAX_SESSION_BYTES / MB)}MB, ` +
+      `전체 ${Math.round(MAX_TOTAL_BYTES / MB)}MB, IP당 ${SESSIONS_PER_IP_HOUR}세션/시간·${UPLOAD_GB_PER_IP_DAY}GB/일, ` +
+      `하루 전송 ${DAILY_EGRESS_GB}GB`);
     return;
   }
   const hosts = lanAddresses();

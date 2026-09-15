@@ -58,11 +58,11 @@
     },
     'd.aboutBody': {
       ko: '앱 설치도, 로그인도, 이메일도, 클라우드도 필요 없습니다. PC 화면에 뜬 QR 코드를 휴대폰으로 찍고 '
-        + '사진이나 파일을 고르면 PC로 바로 전송됩니다. 와이파이든 데이터든 상관없고, 보낸 파일은 PC가 '
-        + '받아가는 즉시 서버에서 지워집니다.',
+        + '사진이나 파일을 고르면 PC로 바로 전송됩니다. 와이파이든 데이터든 상관없고, 보낸 파일은 PC에 '
+        + '저장하는 즉시 서버에서 지워집니다.',
       en: 'No app, login, email, or cloud storage required. Scan the QR code with your phone, pick your photos, '
         + 'and they go straight to your PC — over Wi-Fi or mobile data. Files are deleted from the server the '
-        + 'moment your PC picks them up.'
+        + 'moment you save them on your PC.'
     },
 
     'd.status.booting': { ko: '준비 중…', en: 'Getting ready…' },
@@ -103,8 +103,8 @@
       en: 'No app needed on your phone — just point the built-in camera at the QR code.'
     },
     'd.hint2': {
-      ko: '사진은 <b>저장되지 않습니다.</b> 이 화면이 받아가면 서버에서 바로 지워집니다.',
-      en: 'Photos are <b>never stored.</b> Once this screen receives them, the server deletes them.'
+      ko: '사진은 <b>저장되지 않습니다.</b> PC에 저장하면 서버에서 바로 지워집니다.',
+      en: 'Photos are <b>never stored.</b> Once you save them on this PC, the server deletes them.'
     },
     'd.hint3': { ko: '이 창을 닫으면 전송도 멈춥니다.', en: 'Closing this window stops the transfer.' },
 
@@ -143,6 +143,17 @@
       ko: '브라우저가 “여러 파일 다운로드 허용”을 물으면 허용해 주세요',
       en: 'If the browser asks to allow multiple downloads, please allow it'
     },
+    'd.savedRemoved': {
+      ko: '저장한 파일은 서버에서 바로 지워집니다',
+      en: 'Saved files are deleted from the server right away'
+    },
+    'd.countTitle': { ko: '{n}장 / 한 세션 최대 {max}장', en: '{n} of {max} files per session' },
+    'd.zipBigConfirm': {
+      ko: 'ZIP 용량이 약 {mb}MB입니다. 인터넷이 느리면 내려받다가 끊길 수 있어요.\n'
+        + '「받는 즉시 자동 저장」을 켜면 한 장씩 안전하게 받을 수 있습니다.\n\n그래도 ZIP으로 받을까요?',
+      en: 'This ZIP is about {mb}MB. On a slow connection the download may time out.\n'
+        + 'Turning on “Save on arrival” downloads them one by one instead.\n\nDownload the ZIP anyway?'
+    },
 
     // ---------------------------------------------------------------- 폰 화면
     'm.head': { ko: 'PC로 보내기', en: 'Send to PC' },
@@ -178,6 +189,25 @@
     'm.sent': { ko: '전송 완료', en: 'Sent' },
     'm.sentCount': { ko: '{n}개 전송 완료 — PC 화면을 확인하세요.', en: '{n} sent — check your PC screen.' },
     'm.failedWith': { ko: '실패: {msg}', en: 'Failed: {msg}' },
+    'm.retrying': { ko: '다시 보내는 중… ({n}/{max})', en: 'Retrying… ({n}/{max})' },
+    'm.progress': {
+      ko: '{done} / {total}장 보내는 중 — 화면을 켜 두세요',
+      en: 'Sending {done} of {total} — keep the screen on'
+    },
+    'm.allDone': { ko: '{n}장 모두 보냈습니다', en: 'All {n} files sent' },
+    'm.doneWithFailed': {
+      ko: '{done}장 전송, {failed}장 실패',
+      en: '{done} sent, {failed} failed'
+    },
+    'm.retryFailed': { ko: '실패한 {n}장 다시 보내기', en: 'Retry {n} failed files' },
+    'm.overLimit': {
+      ko: '한 번에 {max}장까지 보낼 수 있습니다. {n}장은 담지 않았어요. PC에서 저장한 뒤 새 QR로 이어서 보내 주세요.',
+      en: 'Up to {max} files per session — {n} were left out. Save them on your PC, then continue with a new QR code.'
+    },
+    'm.overOriginalLimit': {
+      ko: '원본 화질은 {max}장까지입니다. {n}장은 담지 않았어요. 많이 보내려면 원본 화질을 꺼 주세요.',
+      en: 'Original quality is limited to {max} files — {n} were left out. Turn off original quality to send more.'
+    },
     'm.convertFail': { ko: '변환 실패', en: 'Conversion failed' },
     'm.tooBig': {
       ko: '파일이 너무 큽니다. 원본 화질을 꺼 주세요.',

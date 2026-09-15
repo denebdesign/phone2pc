@@ -26,6 +26,9 @@ const POLL_HIDDEN_MS = 8000;   // 탭이 안 보일 때는 느리게
 
 let sessionId = null;
 let net = { mode: 'cloud', hosts: [], port: null, suggested: null };
+// 서버가 세션을 만들 때 함께 내려준다. 목록이 한도에 가까워지면 미리 알려주는 데 쓴다.
+let limits = { maxItems: 120, maxOriginalItems: 20, maxFileMB: 20, maxSessionMB: 150 };
+let savedNoteShown = false;
 let shareUrl = '';
 let files = [];
 let pollDelay = POLL_MIN_MS;
@@ -98,8 +101,16 @@ async function newSession() {
   setStatus('', T('d.status.session'));
 
   try {
-    const data = await fetch('/api/session', { method: 'POST' }).then((r) => r.json());
+    const res = await fetch('/api/session', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) {
+      // 하루 전송 한도나 IP 제한에 걸린 경우다. 서버가 보낸 안내를 그대로 보여준다.
+      setStatus('off', (window.I18N.lang === 'en' && data.error_en) || data.error || T('d.status.sessionFail'));
+      qrFrame.textContent = T('d.qr.fail');
+      return;
+    }
     sessionId = data.id;
+    if (data.limits) limits = data.limits;
   } catch (err) {
     setStatus('off', T('d.status.sessionFail'));
     return;
@@ -209,7 +220,16 @@ document.addEventListener('visibilitychange', () => {
 const tiles = new Map();
 
 function fileUrl(file, forDownload) {
-  return `/api/file/${sessionId}/${file.id}` + (forDownload ? '?dl=1' : '');
+  // once=1 은 "저장이 끝나면 서버에서 지워라"는 뜻이다
+  return `/api/file/${sessionId}/${file.id}` + (forDownload ? '?dl=1&once=1' : '');
+}
+
+/**
+ * 목록에 쓰는 작은 미리보기. 폰이 함께 보내 준 것이라 원본보다 훨씬 가볍다.
+ * (원본을 미리보기로 쓰면 같은 사진이 미리보기와 저장으로 두 번 나간다.)
+ */
+function thumbUrl(file) {
+  return `/api/thumb/${sessionId}/${file.id}`;
 }
 
 function render() {
@@ -224,6 +244,9 @@ function render() {
     grid.prepend(node);
   }
   countBadge.textContent = String(files.length);
+  // 한도가 가까워지면 미리 알려준다. 100장을 보내다 막히는 것보다 낫다.
+  countBadge.title = T('d.countTitle', { n: files.length, max: limits.maxItems });
+  countBadge.classList.toggle('warn', files.length >= Math.round(limits.maxItems * 0.8));
   zipBtn.disabled = files.length === 0;
   clearBtn.disabled = files.length === 0;
   emptyBox.style.display = files.length === 0 ? '' : 'none';
@@ -238,7 +261,7 @@ function tile(file) {
   if (file.type.startsWith('image/')) {
     const img = document.createElement('img');
     img.loading = 'lazy';
-    img.src = fileUrl(file);
+    img.src = thumbUrl(file);
     img.alt = file.name;
     thumb.appendChild(img);
   } else if (file.type.startsWith('video/')) {
@@ -300,6 +323,14 @@ function download(file) {
   document.body.appendChild(a);
   a.click();
   a.remove();
+  noteAutoRemove();
+}
+
+// 저장한 파일이 목록에서 사라지는 이유를 한 번은 알려준다
+function noteAutoRemove() {
+  if (savedNoteShown) return;
+  savedNoteShown = true;
+  toast(T('d.savedRemoved'));
 }
 
 async function copyImage(file, button) {
@@ -353,8 +384,17 @@ el('newSession').onclick = () => {
 
 hostSelect.onchange = updateQr;
 
+// Firebase Hosting은 요청 하나를 60초에서 끊는다. 회선이 느린 곳에서 큰 ZIP은 여기에 걸린다.
+const ZIP_WARN_BYTES = 60 * 1024 * 1024;
+
 zipBtn.onclick = () => {
-  window.location.href = `/api/zip/${sessionId}`;
+  const total = files.reduce((sum, f) => sum + f.size, 0);
+  if (total > ZIP_WARN_BYTES &&
+      !confirm(T('d.zipBigConfirm', { mb: Math.round(total / 1024 / 1024) }))) return;
+
+  // ZIP이 끝까지 내려간 뒤에 서버가 목록을 비운다 (once=1)
+  window.location.href = `/api/zip/${sessionId}?once=1`;
+  noteAutoRemove();
 };
 
 clearBtn.onclick = async () => {
