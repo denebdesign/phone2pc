@@ -9,6 +9,8 @@
  *
  * 반면 광고 지역 판정(isKorea)은 계속 기기의 표준시간대로 한다. 서버 헤더로 국가를 받으면
  * /api/ads 응답이 CDN에 공유 캐시되면서 한 사람의 국가가 다른 사람에게 새어 나갈 수 있다.
+ * 다만 지역만으로는 부족하다. 국내에서 영어 화면을 열 수도 있으므로, 한국어 상품 배너는
+ * 지역과 화면 언어를 함께 본다(banners.js).
  */
 
 (function () {
@@ -101,8 +103,10 @@
     set('meta[property="og:description"]', t('meta.ogDesc'));
     set('meta[name="twitter:title"]', title);
     set('meta[name="twitter:description"]', t('meta.ogDesc'));
-    set('meta[property="og:locale"]', isKorea ? 'ko_KR' : 'en_US');
-    set('meta[property="og:locale:alternate"]', isKorea ? 'en_US' : 'ko_KR');
+    // 공유 카드의 언어 표시는 화면 언어를 따른다. 표준시간대로 정하면 한국에서 연
+    // 영어 화면(/en)이 ko_KR로 표시된다.
+    set('meta[property="og:locale"]', lang === 'ko' ? 'ko_KR' : 'en_US');
+    set('meta[property="og:locale:alternate"]', lang === 'ko' ? 'en_US' : 'ko_KR');
 
     // 구조화 데이터도 같은 설명을 말하게 맞춘다
     const ld = document.getElementById('ldJson');

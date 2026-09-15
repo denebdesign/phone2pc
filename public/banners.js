@@ -23,8 +23,14 @@
     const adsense = config.adsense || {};
     const slot = isMobilePage ? adsense.slotMobile : adsense.slotDesktop;
 
-    // 네이버 쇼핑 커넥트는 국내 접속에서만 노출한다
-    const shown = window.I18N.isKorea ? pickRandom(items, naver.showCount) : [];
+    /**
+     * 네이버 쇼핑 커넥트는 국내 접속이면서 한국어 화면일 때만 노출한다.
+     *
+     * 표준시간대만 보면 한국에서 영어 화면(/en)을 열었을 때 영어 페이지에 한국어 상품
+     * 배너가 끼어든다. 상품 문구가 한국어뿐이라 언어 조건을 함께 본다.
+     */
+    const forKorea = window.I18N.isKorea && window.I18N.lang === 'ko';
+    const shown = forKorea ? pickRandom(items, naver.showCount) : [];
 
     // 제휴·광고는 본문과 같은 밝은 카드로, 회사 정보는 페이지 끝을 알리는 짙은 띠로 나눈다
     const top = document.createElement('div');
