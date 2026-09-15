@@ -202,6 +202,9 @@ HTML만 고치고 표를 안 고치면 서버가 뜰 때 경고를 찍습니다.
 }
 ```
 
+- 하단 회사정보는 **짙은 띠**로 페이지 끝을 표시합니다. `site.summary` 한 줄만 항상 보이고,
+  긴 소개(`site.tagline`)와 이용 고지(`site.notice`)는 「이용 안내 · 주의사항」 접기 안에 들어갑니다.
+  `summary` 를 비우면 `tagline` 의 첫 문장을 잘라 씁니다.
 - `adsense.client` 를 채우면 **`/ads.txt` 가 자동으로 생성**됩니다. (`google.com, pub-..., DIRECT, f08c47fec0942fa0`)
 - Cloud Run 환경변수 `ADSENSE_CLIENT`, `ADSENSE_SLOT_DESKTOP`, `ADSENSE_SLOT_MOBILE` 이 있으면 그쪽이 우선합니다.
 - 네이버 링크는 `rel="sponsored noopener noreferrer"` 로 나가고, 수수료 고지 문구가 항상 함께 표시됩니다.

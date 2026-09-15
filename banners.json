@@ -5,6 +5,8 @@
     "_설명": "url이 빈 링크는 클릭할 수 없는 회색 글씨로만 표시됩니다(깨진 링크 방지). icon 종류: shield, book, info, chat, bug, ad",
     "name": "phone2pc (폰투피씨)",
     "nameEn": "phone2pc",
+    "summary": "앱도 로그인도 없이, QR 한 번으로 폰 사진을 PC로. 사진은 저장하지 않습니다.",
+    "summaryEn": "No app, no sign-in — one QR scan puts your phone photos on your PC. Nothing is stored.",
     "tagline": "앱 설치도 로그인도 없이, 폰으로 찍은 사진을 QR 한 번으로 PC 화면에 바로 띄우는 무료 서비스. 사진은 디스크에 저장하지 않고 서버 메모리에만 잠시 머물며, PC에 저장하는 즉시 지워집니다. 저장하지 않은 파일도 「비우기」를 누르거나 30분이 지나면 지워집니다.",
     "taglineEn": "A free service that puts the photo you just took on your PC screen with one QR scan — no app, no sign-in. Photos are never written to disk — they sit in server memory only and are erased the moment you save them on your PC. Anything left unsaved is erased when you press Clear or after 30 minutes.",
     "notice": "세션 주소를 아는 사람은 그 파일을 열 수 있습니다. 한 번에 최대 120장(원본 화질은 20장)까지 보낼 수 있고, 과도한 이용은 제한될 수 있습니다. 타인의 권리를 침해하거나 법령에 어긋나는 파일의 전송은 금지되며, 확인되면 이용이 제한될 수 있습니다.",

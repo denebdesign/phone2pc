@@ -227,6 +227,7 @@
       ko: 'banners.json 에 client / slot 값을 넣으면 실제 광고가 나갑니다',
       en: 'Fill in client / slot in banners.json to serve real ads'
     },
+    'f.moreInfo': { ko: '이용 안내 · 주의사항', en: 'How it works · Notes' },
     'f.domain': { ko: '공식 도메인', en: 'Official domain' },
     'f.contact': { ko: '문의·제휴', en: 'Contact' },
     'f.pending': { ko: '준비 중입니다', en: 'Coming soon' }

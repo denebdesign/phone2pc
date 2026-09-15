@@ -26,10 +26,14 @@
     // 네이버 쇼핑 커넥트는 국내 접속에서만 노출한다
     const shown = window.I18N.isKorea ? pickRandom(items, naver.showCount) : [];
 
+    // 제휴·광고는 본문과 같은 밝은 카드로, 회사 정보는 페이지 끝을 알리는 짙은 띠로 나눈다
+    const top = document.createElement('div');
+    top.className = 'footer-top';
+    if (shown.length > 0) top.appendChild(naverSection(naver, shown));
+    top.appendChild(adSection(adsense.client, slot));
+
     const frag = document.createDocumentFragment();
-    if (shown.length > 0) frag.appendChild(naverSection(naver, shown));
-    frag.appendChild(adSection(adsense.client, slot));
-    frag.appendChild(siteInfo(config.site || {}));
+    frag.append(top, siteInfo(config.site || {}));
     mount.appendChild(frag);
 
     if (adsense.client && slot) loadAdsense(adsense.client);
@@ -243,11 +247,21 @@
     return node;
   }
 
+  /** 첫 문장만 잘라 쓴다. summary 값이 없을 때의 대비책이다. */
+  function firstSentence(text) {
+    const cut = String(text).match(/^[^.!?]{10,90}[.!?]/);
+    return cut ? cut[0].trim() : String(text).slice(0, 90).trim();
+  }
+
   function siteInfo(site) {
+    const band = document.createElement('div');
+    band.className = 'site-info-band';
+
     const box = document.createElement('div');
     box.className = 'site-info';
+    band.appendChild(box);
 
-    // 1열: 로고 · 소개 · 도메인
+    // 1열: 로고 · 한 줄 소개 · 도메인
     const about = document.createElement('div');
     about.className = 'si-about';
 
@@ -263,19 +277,40 @@
     about.appendChild(head);
 
     const taglineText = P(site, 'tagline');
-    if (taglineText) {
-      const tagline = document.createElement('p');
-      tagline.className = 'si-tagline';
-      tagline.textContent = taglineText;
-      about.appendChild(tagline);
+    const noticeText = P(site, 'notice');
+    const summaryText = P(site, 'summary') || (taglineText ? firstSentence(taglineText) : '');
+
+    if (summaryText) {
+      const summary = document.createElement('p');
+      summary.className = 'si-summary';
+      summary.textContent = summaryText;
+      about.appendChild(summary);
     }
 
-    const noticeText = P(site, 'notice');
-    if (noticeText) {
-      const notice = document.createElement('p');
-      notice.className = 'si-notice';
-      notice.textContent = noticeText;
-      about.appendChild(notice);
+    /**
+     * 긴 소개와 이용 고지는 접어 둔다.
+     * 하단이 화면을 다 차지하면 정작 서비스가 안 보인다. 특히 폰에서.
+     */
+    if (taglineText || noticeText) {
+      const more = document.createElement('details');
+      more.className = 'si-more';
+      const label = document.createElement('summary');
+      label.textContent = T('f.moreInfo');
+      more.appendChild(label);
+
+      if (taglineText) {
+        const tagline = document.createElement('p');
+        tagline.className = 'si-tagline';
+        tagline.textContent = taglineText;
+        more.appendChild(tagline);
+      }
+      if (noticeText) {
+        const notice = document.createElement('p');
+        notice.className = 'si-notice';
+        notice.textContent = noticeText;
+        more.appendChild(notice);
+      }
+      about.appendChild(more);
     }
 
     const meta = document.createElement('div');
@@ -341,6 +376,6 @@
     if (mini.childNodes.length > 0) bottom.appendChild(mini);
 
     box.appendChild(bottom);
-    return box;
+    return band;
   }
 })();

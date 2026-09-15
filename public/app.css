@@ -22,6 +22,13 @@
   --radius-xs: 12px;
   --shadow: 0 1px 2px rgba(60, 44, 130, .04), 0 10px 28px rgba(60, 44, 130, .09);
   --shadow-lift: 0 2px 6px rgba(60, 44, 130, .08), 0 18px 40px rgba(60, 44, 130, .16);
+
+  /* 하단 회사정보 띠. 밝은 화면에서도 짙게 깔아 페이지가 끝났음을 알린다 */
+  --footer-bg: #17143a;
+  --footer-text: #f0edff;
+  --footer-muted: #a9a2d2;
+  --footer-line: rgba(255, 255, 255, .13);
+  --footer-link: #c6b8ff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -43,6 +50,13 @@
 
     --shadow: 0 1px 2px rgba(0, 0, 0, .34), 0 12px 30px rgba(0, 0, 0, .3);
     --shadow-lift: 0 2px 8px rgba(0, 0, 0, .4), 0 20px 44px rgba(0, 0, 0, .42);
+
+    /* 어두운 화면에서는 배경보다 한 단계 더 가라앉힌다 */
+    --footer-bg: #0c0a1b;
+    --footer-text: #ece9fb;
+    --footer-muted: #9d97bd;
+    --footer-line: rgba(255, 255, 255, .09);
+    --footer-link: #b7a6ff;
   }
 }
 
@@ -478,15 +492,19 @@ details.host-picker select {
 
 /* ------------------------------------------------------- 하단 제휴·광고 영역 */
 
-.site-footer {
+/* 푸터 자체는 화면 폭을 다 쓴다. 가운데 정렬은 안쪽 두 덩어리가 따로 한다.
+   (제휴·광고는 본문과 같은 밝은 카드, 회사정보는 화면 끝까지 깔리는 짙은 띠) */
+.site-footer { margin-top: 8px; }
+
+.footer-top {
   max-width: 1440px;
   margin: 0 auto;
-  padding: 8px 32px 40px;
+  padding: 0 32px 28px;
   display: grid;
   gap: 16px;
 }
-.mobile-page .site-footer { max-width: 520px; padding: 4px 18px 40px; }
-@media (max-width: 900px) { .site-footer { padding: 4px 16px 32px; } }
+.mobile-page .footer-top { max-width: 520px; padding: 0 18px 22px; }
+@media (max-width: 900px) { .footer-top { padding: 0 16px 24px; } }
 
 .promo {
   background: var(--panel);
@@ -553,6 +571,16 @@ details.host-picker select {
 
 .promo-note { font-size: 11px; color: var(--muted); margin: 13px 0 0; }
 
+/* 폰에서는 제휴 카드가 화면을 크게 먹는다. 정보는 그대로 두고 여백만 줄인다. */
+@media (max-width: 760px) {
+  .promo { padding: 15px 15px 13px; }
+  .promo-head { margin-bottom: 11px; }
+  .promo-card { padding: 12px 13px; gap: 11px; }
+  .promo-thumb { width: 64px; height: 64px; }
+  .promo-go { margin-top: 7px; }
+  .promo-note { font-size: 10.5px; margin-top: 11px; }
+}
+
 .adslot {
   background: var(--panel-2);
   border: 1px solid var(--line);
@@ -579,18 +607,23 @@ details.host-picker select {
 
 /* ------------------------------------------------------------------ 회사정보 */
 
-.site-info {
-  display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(150px, 1fr) minmax(150px, 1fr);
-  gap: 26px 32px;
-  padding: 24px 26px 18px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+.site-info-band {
+  background: var(--footer-bg);
+  color: var(--footer-text);
+  border-top: 1px solid var(--footer-line);
 }
+
+.site-info {
+  max-width: 1440px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(140px, .7fr) minmax(140px, .7fr);
+  gap: 24px 44px;
+  padding: 34px 32px 18px;
+}
+.mobile-page .site-info { max-width: 520px; grid-template-columns: 1fr; gap: 20px; padding: 26px 18px 14px; }
 @media (max-width: 760px) {
-  .site-info { grid-template-columns: 1fr; gap: 22px; padding: 20px 20px 14px; }
+  .site-info { grid-template-columns: 1fr; gap: 20px; padding: 28px 16px 14px; }
 }
 
 .si-head { display: flex; align-items: center; gap: 11px; }
@@ -604,61 +637,91 @@ details.host-picker select {
 }
 .si-name { font-size: 16px; font-weight: 700; letter-spacing: -.3px; }
 
-.si-tagline {
-  font-size: 12.5px;
-  line-height: 1.7;
-  color: var(--muted);
-  margin: 12px 0 14px;
-  max-width: 46em;
+/* 한 줄 소개. 나머지 긴 문구는 아래 접기 안으로 넣는다. */
+.si-summary {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--footer-muted);
+  margin: 12px 0 12px;
+  max-width: 30em;
+  text-wrap: pretty;   /* 마지막 줄에 한 낱말만 남는 것을 줄인다 (미지원 브라우저는 무시) */
 }
 
-.si-notice {
-  font-size: 11.5px;
-  line-height: 1.65;
-  color: var(--muted);
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xs);
-  padding: 9px 12px;
-  margin: 0 0 13px;
-  max-width: 46em;
+/* 이용 안내·주의사항 접기. 하단이 화면을 다 먹지 않게 하는 핵심 장치다. */
+.si-more { margin: 0 0 14px; }
+.si-more > summary {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--footer-line);
+  background: rgba(255, 255, 255, .05);
+  color: var(--footer-link);
+  font-size: 12px;
+  cursor: pointer;
+  list-style: none;
+  transition: background .13s, border-color .13s;
 }
+.si-more > summary::-webkit-details-marker { display: none; }
+.si-more > summary::after { content: '▾'; font-size: 9px; opacity: .8; }
+.si-more[open] > summary::after { content: '▴'; }
+.si-more > summary:hover { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .22); }
+
+.si-tagline, .si-notice {
+  font-size: 12px;
+  line-height: 1.75;
+  color: var(--footer-muted);
+  margin: 12px 0 0;
+  max-width: 52em;
+}
+.si-notice { padding-top: 11px; border-top: 1px solid var(--footer-line); }
 
 .si-meta {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
-  font-size: 12px; color: var(--muted);
+  font-size: 12px; color: var(--footer-muted);
 }
-.si-sep { color: var(--line); user-select: none; }
+.si-sep { color: var(--footer-line); user-select: none; }
 
 .si-domain, .si-board {
   display: inline-flex; align-items: center; gap: 4px;
   font-family: ui-monospace, SFMono-Regular, Menlo, "Consolas", monospace;
   font-size: 12px;
   font-weight: 600;
-  color: var(--accent-ink);
+  color: var(--footer-link);
   text-decoration: none;
 }
 .si-domain:hover, .si-board:hover { text-decoration: underline; }
 .si-board { font-weight: 500; }
 
-.si-group { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
+.si-group { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
 .si-group-title {
-  font-size: 12.5px; font-weight: 700; letter-spacing: -.1px;
-  margin-bottom: 3px;
+  font-size: 11.5px; font-weight: 700; letter-spacing: .4px;
+  text-transform: uppercase;
+  color: var(--footer-muted);
+  opacity: .8;
+  margin-bottom: 1px;
 }
 
 .si-link {
   display: inline-flex; align-items: center; gap: 7px;
   font-size: 12.5px;
-  color: var(--muted);
+  color: var(--footer-text);
   text-decoration: none;
   transition: color .13s, transform .13s;
 }
-a.si-link:hover { color: var(--accent-ink); transform: translateX(2px); }
-.si-link.accent { color: var(--accent-ink); font-weight: 600; }
-.si-link svg { flex: none; opacity: .85; }
-.si-link .ext-mark { opacity: .45; margin-left: 1px; }
-.si-link.pending { opacity: .45; cursor: default; }
+a.si-link:hover { color: var(--footer-link); transform: translateX(2px); }
+.si-link.accent { color: var(--footer-link); font-weight: 600; }
+.si-link svg { flex: none; opacity: .75; }
+.si-link .ext-mark { opacity: .4; margin-left: 1px; }
+.si-link.pending { opacity: .4; cursor: default; }
+
+/* 좁은 화면에서는 링크를 줄줄이 세우지 않고 한 줄에 흘린다. 높이가 절반으로 준다. */
+.mobile-page .si-group { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
+.mobile-page .si-group-title { width: 100%; margin-bottom: 0; }
+@media (max-width: 760px) {
+  .si-group { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
+  .si-group-title { width: 100%; margin-bottom: 0; }
+  a.si-link:hover { transform: none; }
+}
 
 .si-bottom {
   grid-column: 1 / -1;
@@ -667,18 +730,18 @@ a.si-link:hover { color: var(--accent-ink); transform: translateX(2px); }
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  border-top: 1px solid var(--line);
-  margin-top: 4px;
-  padding-top: 15px;
+  border-top: 1px solid var(--footer-line);
+  margin-top: 6px;
+  padding-top: 14px;
 }
-.si-copy { font-size: 11.5px; color: var(--muted); }
+.si-copy { font-size: 11.5px; color: var(--footer-muted); }
 
 .si-mini { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .si-mini-link {
   display: inline-flex; align-items: center; gap: 4px;
-  font-size: 11.5px; color: var(--muted); text-decoration: none;
+  font-size: 11.5px; color: var(--footer-muted); text-decoration: none;
 }
-a.si-mini-link:hover { color: var(--accent-ink); text-decoration: underline; }
-.si-mini-link.accent { color: var(--accent-ink); font-weight: 600; }
+a.si-mini-link:hover { color: var(--footer-link); text-decoration: underline; }
+.si-mini-link.accent { color: var(--footer-link); font-weight: 600; }
 .si-mini-link .ext-mark { opacity: .5; }
-.si-mini-link.pending { opacity: .45; cursor: default; }
+.si-mini-link.pending { opacity: .4; cursor: default; }
